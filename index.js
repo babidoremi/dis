@@ -2,38 +2,36 @@ const { Client } = require('discord.js-selfbot-v13');
 const express = require('express');
 
 const app = express();
-app.get('/', (req, res) => res.send('Bot đang cắm chốt giữ phòng bất tử!'));
+app.get('/', (req, res) => res.send('Bot giữ phòng thông minh đang chạy!'));
 app.listen(process.env.PORT || 3000);
 
 const client = new Client({ checkUpdate: false });
 const TOKEN = process.env.TOKEN; 
 
-// ======================================================================================
-// QUAN TRỌNG: Dán Link hoặc ID của cái "PHÒNG RIÊNG" mà ông vừa tạo bằng nick chính vào đây
-const LINK_HOAC_ID = 'https://discord.com/channels/653508294962315285/1509004985424412711'; 
-// ======================================================================================
+// ==========================================
+// CẤU HÌNH THÔNG TIN CỦA ÔNG TẠI ĐÂY
+const LINK_PHONG_RIENG = 'https://discord.com/channels/653508294962315285/1509004985424412711'; 
+const ID_BOT_CANDIJOY = '1083650933268955156';
+const ID_BOT_DKIEN = '1335142767554461836';
+// ==========================================
 
 let isMuted = false;
 
-// Hàm tự động tách Link để lấy ID
 function getDiscordIds(input) {
     if (input.includes('channels/')) {
         const parts = input.trim().split('/');
         return { guildId: parts[parts.length - 2], channelId: parts[parts.length - 1] };
     }
-    // Nếu chỉ dán ID phòng thì nó tự dùng ID của Server Valorant (nhớ thay ID Server vào nhé)
     return { guildId: '653508294962315285', channelId: input };
 }
 
 client.on('ready', async () => {
     console.log(`Bot online: ${client.user.tag}`);
     try {
-        const { guildId, channelId } = getDiscordIds(LINK_HOAC_ID);
+        const { guildId, channelId } = getDiscordIds(LINK_PHONG_RIENG);
         const guild = client.guilds.cache.get(guildId);
+        if (!guild) return console.log("Không tìm thấy Server!");
 
-        if (!guild) return console.log("Không tìm thấy Server! Kiểm tra lại Link/ID nhé.");
-
-        // Hàm bắn tín hiệu thẳng vào Gateway để ép nháy mic
         const toggleMic = (targetChannelId, muteState) => {
             guild.shard.send({
                 op: 4,
@@ -41,19 +39,37 @@ client.on('ready', async () => {
             });
         };
 
-        // Kích hoạt bế nick vào phòng riêng ngay lập tức
+        // Vào phòng cắm chốt
         toggleMic(channelId, isMuted);
-        console.log(`Đã chui tọt vào phòng ${channelId}! Bắt đầu múa mic giữ phòng...`);
+        console.log("Đã vào phòng! Bắt đầu quét người lạ...");
 
-        // Cứ đúng 60 giây đảo mic một lần để Discord không đá vì AFK
         setInterval(() => {
-            isMuted = !isMuted;
-            toggleMic(channelId, isMuted);
-            console.log(`[${new Date().toLocaleTimeString()}] Đã đổi trạng thái Mic (Mute: ${isMuted})`);
-        }, 60000);
+            // Lấy dữ liệu của phòng voice hiện tại
+            const voiceChannel = guild.channels.cache.get(channelId);
+            
+            if (voiceChannel) {
+                // LỌC NGƯỜI LẠ: Đếm xem có ai trong phòng mà KHÔNG PHẢI là candijoy và KHÔNG PHẢI là dkien không
+                const nguoiLa = voiceChannel.members.filter(m => m.id !== ID_BOT_CANDIJOY && m.id !== ID_BOT_DKIEN);
+
+                // Nếu phát hiện có ít nhất 1 người lạ chui vào phòng
+                if (nguoiLa.size > 0) {
+                    console.log(`[${new Date().toLocaleTimeString()}] Phát hiện có người vào phòng! Bot tự động rút lui.`);
+                    toggleMic(null, false); // Lệnh rời phòng voice
+                    process.exit(0);        // Tắt máy chủ GitHub ngay lập tức để tiết kiệm phút chạy
+                }
+
+                // Nếu phòng vẫn trống, tiếp tục nháy mic giữ phòng
+                isMuted = !isMuted;
+                toggleMic(channelId, isMuted);
+                console.log(`[${new Date().toLocaleTimeString()}] Phòng an toàn. Đang giữ phòng...`);
+            } else {
+                // Nếu phòng bị lỗi hoặc biến mất, tự động chui lại vào sảnh (nếu có)
+                toggleMic(channelId, isMuted);
+            }
+        }, 60000); // Mỗi 1 phút quét 1 lần
 
     } catch (e) {
-        console.log("Lỗi hệ thống: ", e.message);
+        console.log("Lỗi: ", e.message);
     }
 });
 
