@@ -1,8 +1,8 @@
 name: Treo Discord Tu Dong
 on:
-  workflow_dispatch: # Nút bấm chạy bằng tay để test
+  workflow_dispatch: 
   schedule:
-    # Nhớ sửa lại giờ cho đúng ca (candijoy là '0 17 * * *' | dkien là '50 22 * * *')
+    # Nhớ sửa lại giờ cho đúng ca nhé
     - cron: '0 17 * * *' 
 
 jobs:
@@ -15,4 +15,5 @@ jobs:
           node-version: 20
       - env:
           TOKEN: ${{ secrets.TOKEN }}
-        run: node index.js
+        # Lệnh mới: Ép nó tải thư viện (npm install) trước, xong mới chạy code
+        run: npm install && node index.js
