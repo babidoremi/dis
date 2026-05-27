@@ -2,7 +2,7 @@ const { Client } = require('discord.js-selfbot-v13');
 const express = require('express');
 
 const app = express();
-app.get('/', (req, res) => res.send('Bot giữ phòng thông minh đang chạy!'));
+app.get('/', (req, res) => res.send('Bot giữ phòng thông minh có nhận diện Chủ Room!'));
 app.listen(process.env.PORT || 3000);
 
 const client = new Client({ checkUpdate: false });
@@ -11,11 +11,11 @@ const TOKEN = process.env.TOKEN;
 // ==========================================
 // CẤU HÌNH THÔNG TIN CỦA ÔNG TẠI ĐÂY
 const LINK_PHONG_RIENG = 'https://discord.com/channels/653508294962315285/1509004985424412711'; 
-const ID_BOT_CANDIJOY = '1083650933268955156';
-const ID_BOT_DKIEN = '1335142767554461836';
+const ID_CHU_ROOM = '897847285122228244'; // Bot sẽ quét ID này
 // ==========================================
 
 let isMuted = false;
+let soPhutChuRoomXuatHien = 0; // Bộ đếm thời gian
 
 function getDiscordIds(input) {
     if (input.includes('channels/')) {
@@ -30,6 +30,7 @@ client.on('ready', async () => {
     try {
         const { guildId, channelId } = getDiscordIds(LINK_PHONG_RIENG);
         const guild = client.guilds.cache.get(guildId);
+        
         if (!guild) return console.log("Không tìm thấy Server!");
 
         const toggleMic = (targetChannelId, muteState) => {
@@ -39,34 +40,44 @@ client.on('ready', async () => {
             });
         };
 
-        // Vào phòng cắm chốt
+        // Kích hoạt bế nick vào phòng
         toggleMic(channelId, isMuted);
-        console.log("Đã vào phòng! Bắt đầu quét người lạ...");
+        console.log("Đã vào phòng! Đang canh gác chờ Chủ Room...");
 
+        // Mạch lặp 60 giây (1 phút) quét 1 lần
         setInterval(() => {
-            // Lấy dữ liệu của phòng voice hiện tại
             const voiceChannel = guild.channels.cache.get(channelId);
             
             if (voiceChannel) {
-                // LỌC NGƯỜI LẠ: Đếm xem có ai trong phòng mà KHÔNG PHẢI là candijoy và KHÔNG PHẢI là dkien không
-                const nguoiLa = voiceChannel.members.filter(m => m.id !== ID_BOT_CANDIJOY && m.id !== ID_BOT_DKIEN);
+                // Kiểm tra xem ID Nick Chính của ông có đang đứng trong phòng không
+                const chuRoomCoMat = voiceChannel.members.has(ID_CHU_ROOM);
 
-                // Nếu phát hiện có ít nhất 1 người lạ chui vào phòng
-                if (nguoiLa.size > 0) {
-                    console.log(`[${new Date().toLocaleTimeString()}] Phát hiện có người vào phòng! Bot tự động rút lui.`);
-                    toggleMic(null, false); // Lệnh rời phòng voice
-                    process.exit(0);        // Tắt máy chủ GitHub ngay lập tức để tiết kiệm phút chạy
+                if (chuRoomCoMat) {
+                    soPhutChuRoomXuatHien++;
+                    console.log(`Phát hiện Chủ Room! Đang đếm ngược bàn giao: ${soPhutChuRoomXuatHien}/10 phút.`);
+
+                    // Nếu chủ room đứng liên tục đủ 10 phút
+                    if (soPhutChuRoomXuatHien >= 10) {
+                        console.log("Chủ Room đã ổn định 10 phút. Bot bàn giao phòng và tự ngắt kết nối để tiết kiệm tài nguyên!");
+                        toggleMic(null, false); // Rút bot khỏi phòng voice
+                        process.exit(0);        // Khai tử máy chủ GitHub ngay lập tức
+                    }
+                } else {
+                    // Nếu chủ room không có mặt, hoặc vừa vào 3 phút đã rớt mạng văng ra ngoài
+                    if (soPhutChuRoomXuatHien > 0) {
+                        console.log("Chủ Room đã rời đi sớm. Hủy lệnh bàn giao, tiếp tục cắm chốt giữ phòng!");
+                    }
+                    soPhutChuRoomXuatHien = 0; // Reset bộ đếm về 0
                 }
 
-                // Nếu phòng vẫn trống, tiếp tục nháy mic giữ phòng
+                // Nếu chưa out, tiếp tục nhiệm vụ nháy mic giữ phòng
                 isMuted = !isMuted;
                 toggleMic(channelId, isMuted);
-                console.log(`[${new Date().toLocaleTimeString()}] Phòng an toàn. Đang giữ phòng...`);
             } else {
-                // Nếu phòng bị lỗi hoặc biến mất, tự động chui lại vào sảnh (nếu có)
+                console.log("Phòng bị lỗi, tiến hành gửi lại lệnh kết nối...");
                 toggleMic(channelId, isMuted);
             }
-        }, 60000); // Mỗi 1 phút quét 1 lần
+        }, 60000); 
 
     } catch (e) {
         console.log("Lỗi: ", e.message);
