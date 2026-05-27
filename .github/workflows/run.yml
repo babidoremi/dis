@@ -1,0 +1,18 @@
+name: Treo Discord Tu Dong
+on:
+  workflow_dispatch: # Nút bấm chạy bằng tay để test
+  schedule:
+    # Nhớ sửa lại giờ cho đúng ca (candijoy là '0 17 * * *' | dkien là '50 22 * * *')
+    - cron: '0 17 * * *' 
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - env:
+          TOKEN: ${{ secrets.TOKEN }}
+        run: node index.js
