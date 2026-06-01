@@ -10,7 +10,7 @@ const TOKEN = process.env.TOKEN;
 
 // ==========================================
 // CẤU HÌNH THÔNG TIN CỦA ÔNG TẠI ĐÂY
-const LINK_PHONG_RIENG = 'https://discord.com/channels/653508294962315285/1509004985424412711'; 
+const LINK_PHONG_RIENG = 'https://discord.com/channels/653508294962315285/1510863939976691792'; 
 // ==========================================
 
 let isMuted = false;
